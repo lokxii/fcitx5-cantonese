@@ -1,0 +1,10 @@
+[Addon]
+Name=Cantonese
+Category=InputMethod
+Version=@PROJECT_VERSION@
+Library=libcantonese
+Type=SharedLibrary
+OnDemand=True
+Configurable=True
+
+# [Addon/Dependencies]

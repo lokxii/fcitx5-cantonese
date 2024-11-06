@@ -1,0 +1,7 @@
+BasedOnStyle: Chromium
+IndentWidth: 4
+
+AlignAfterOpenBracket: AlwaysBreak
+BinPackArguments: false
+BinPackParameters: false
+AllowShortEnumsOnASingleLine: false

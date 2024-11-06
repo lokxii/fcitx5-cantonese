@@ -1,0 +1,13 @@
+[InputMethod]
+# Translatable name of the input method
+Name=Cantonese
+# Icon name
+Icon=fcitx-cantonese
+# A short label that present the name of input method
+Label=粵
+# ISO 639 language code
+LangCode=zh
+# Match addon name
+Addon=cantonese
+# Whether this input method support customization
+# Configurable=False
