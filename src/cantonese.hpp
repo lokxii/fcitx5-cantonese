@@ -8,6 +8,8 @@
 #include <fcitx/inputmethodengine.h>
 #include <fcitx/instance.h>
 
+#include "ime.hpp"
+
 class CantoneseEngine;
 
 class CantoneseState : public fcitx::InputContextProperty {
@@ -40,11 +42,14 @@ class CantoneseEngine : public fcitx::InputMethodEngineV2 {
         override;
     auto factory() const { return &factory_; }
     auto instance() const { return instance_; }
+    auto& ime() { return ime_; }
 
    private:
     fcitx::Instance* instance_;
     fcitx::FactoryFor<CantoneseState> factory_;
+    IME ime_;
 };
+
 class CantoneseEngineFactory : public fcitx::AddonFactory {
     fcitx::AddonInstance* create(fcitx::AddonManager* manager) override {
         return new CantoneseEngine(manager->instance());

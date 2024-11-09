@@ -1,5 +1,6 @@
-#include "cantonese.hpp"
 #include <fcitx/inputpanel.h>
+
+#include "cantonese.hpp"
 
 class CantoneseCandidateWord : public fcitx::CandidateWord {
    public:
@@ -26,12 +27,14 @@ class CantoneseCandidateList : public fcitx::CandidateList,
         : input_(input) {
         setPageable(this);
         setCursorMovable(this);
-        for (size_t i = 0; i < input_.size(); i++) {
-            candidates_.emplace_back(std::make_unique<CantoneseCandidateWord>(
-                engine, std::string(1, input_[i])));
+        auto imec = engine->ime().candidates(input);
+        for (const auto& c : imec) {
+            candidates_.emplace_back(
+                std::make_unique<CantoneseCandidateWord>(engine, c));
         }
+        imec.clear();
 
-        for (size_t i = 0; i < 10 && i < input_.size(); i++) {
+        for (size_t i = 0; i < 10 && i < candidates_.size(); i++) {
             page_.emplace_back(
                 std::make_tuple(std::to_string(i + 1) + ". ", i));
         }
@@ -110,7 +113,7 @@ class CantoneseCandidateList : public fcitx::CandidateList,
 };
 
 void CantoneseState::keyEvent(fcitx::KeyEvent& event) {
-    FCITX_INFO() << "Buffer: " << buffer_.userInput();
+    // FCITX_INFO() << "Buffer: " << buffer_.userInput();
     if (not buffer_.empty()) {
         if (event.key().check(FcitxKey_BackSpace)) {
             buffer_.backspace();
@@ -152,10 +155,13 @@ void CantoneseState::updateUI() {
 }
 
 CantoneseEngine::CantoneseEngine(fcitx::Instance* instance)
-    : instance_(instance), factory_([this](fcitx::InputContext& ic) {
+    : instance_(instance),
+      factory_([this](fcitx::InputContext& ic) {
           return new CantoneseState(this, &ic);
-      }) {
-    // TODO: Read csv build in memory db
+      }),
+      ime_(
+          IME(std::filesystem::path(std::getenv("HOME")) /
+              ".local/share/fcitx5/cantonese/data")) {
     instance->inputContextManager().registerProperty(
         "cantoneseState", &factory_);
 }
