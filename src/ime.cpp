@@ -11,8 +11,8 @@ namespace rv = std::views;
 namespace ranges = std::ranges;
 
 const std::vector<std::string> initials = {
-    "a", "e", "i",  "o", "u",  "b",  "p", "m", "f",  "d", "t", "n", "l",
-    "g", "k", "ng", "h", "gw", "kw", "w", "j", "ch", "s", "y", "*",
+    "ng", "gw", "kw", "ch", "a", "e", "i", "o", "u", "b", "p", "m", "f",
+    "d",  "t",  "n",  "l",  "g", "k", "h", "w", "j", "s", "y", "*",
 };
 
 const std::vector<std::string> finals = {
@@ -59,45 +59,28 @@ DAGDict codes_from_file(std::ifstream&& code_f) {
 //     return out;
 // }
 
-std::unordered_map<std::string, std::vector<std::string>> vocab_from_file(
-    std::ifstream&& words_f) {
-    std::unordered_map<std::string, std::vector<std::string>> out;
+std::unordered_map<std::string, std::vector<std::pair<std::string, size_t>>>
+vocab_from_file(std::ifstream&& words_f) {
+    std::unordered_map<std::string, std::vector<std::pair<std::string, size_t>>>
+        out;
+
     std::string line;
-    while (std::getline(words_f, line, ',')) {
+    while (std::getline(words_f, line)) {
         auto it = line.cbegin();
-        std::string prefix;
-        utf8::append(utf8::next(it, line.cend()), std::back_inserter(prefix));
+        std::string head, body;
+        size_t freq;
 
-        std::vector<std::string> candidates;
-        std::string word;
-        while (std::distance(line.cbegin(), it) < line.length()) {
-            std::string c;
-            utf8::append(utf8::next(it, line.cend()), std::back_inserter(c));
-            if (c == " ") {
-                candidates.push_back(word);
-                word.clear();
-            } else {
-                word += c;
-            }
+        utf8::append(utf8::next(it, line.cend()), std::back_inserter(head));
+        auto f_it = std::find(it, line.cend(), ',');
+        body = std::string(it, f_it);
+        it = f_it + 1;
+        freq = std::stoi(std::string(it, line.cend()));
+
+        if (out.contains(head)) {
+            out[head].push_back(std::make_pair(head + body, freq));
+        } else {
+            out[head] = {std::make_pair(head + body, freq)};
         }
-        candidates.push_back(word);
-
-        auto tagged_candidates =
-            candidates | rv::transform([](const auto& c) {
-                auto s = std::string(c.cend() - 1, c.cend());
-                int order = std::stoi(s);
-                std::string can = std::string(c.cbegin(), c.cend() - 1);
-                return std::make_pair(can, order);
-            }) |
-            ranges::to<std::vector>();
-        std::stable_sort(
-            tagged_candidates.begin(),
-            tagged_candidates.end(),
-            [](const auto& l, const auto& r) { return l.second < r.second; });
-        out[prefix] =
-            tagged_candidates |
-            rv::transform([](auto&& p) { return std::move(p.first); }) |
-            ranges::to<std::vector>();
     }
     return out;
 }
@@ -110,19 +93,24 @@ IME::IME(std::filesystem::path path_to_data) {
     // this->expand_rules =
     //     expand_rules_from_file<ExpandRuleLess>(std::move(expand_rules_f));
 
-    auto words_f = std::ifstream(path_to_data / "chiwordscat.csv");
-    this->vocab = vocab_from_file(std::move(words_f));
+    auto words_f = std::ifstream(path_to_data / "wordfreq.csv");
+    this->vocabs = vocab_from_file(std::move(words_f));
 }
 
 std::vector<std::string> IME::split_words(const std::string& input) const {
     std::vector<std::string> out;
     auto it = input.cbegin();
     while (std::distance(input.cbegin(), it) < input.length()) {
-        auto prefix = std::string(1, *it);
-        auto pos = std::find(initials.cbegin(), initials.cend(), prefix);
-        if (pos == initials.cend()) {
+        std::string prefix;
+        for (const auto& initial : initials) {
+            if (std::string_view(it, input.cend()).starts_with(initial)) {
+                prefix = initial;
+                break;
+            }
+        }
+        if (prefix == "") {
+            out.push_back(std::string(1, *it));
             it += 1;
-            out.push_back(prefix);
             continue;
         }
 
@@ -152,11 +140,10 @@ std::vector<std::string> IME::split_words(const std::string& input) const {
 
 struct flatten : ranges::range_adaptor_closure<flatten> {
     flatten() {}
-    constexpr std::vector<std::string> operator()(
+    constexpr std::vector<std::pair<std::string, size_t>> operator()(
         const ranges::range auto&& r) {
-        std::vector<std::string> out;
-        for (auto&& [key, l] : r) {
-            out.push_back(std::move(key));
+        std::vector<std::pair<std::string, size_t>> out;
+        for (auto&& l : r) {
             out.insert(
                 out.end(),
                 std::make_move_iterator(l.cbegin()),
@@ -174,27 +161,23 @@ std::vector<std::string> IME::candidates(const std::string& input) {
     }
 
     auto candidates =
-        codes.get_all(words[0]) | rv::transform([&](const std::string& key) {
-            return std::make_pair(
-                key,
-                (vocab.contains(key) ? vocab[key]
-                                     : std::vector<std::string>()) |
-                    rv::transform([&](const std::string& candidate) {
-                        return (key == "*" ? "" : key) + candidate;
-                    }));
+        codes.get_all(words[0]) | rv::transform([&](const auto& head) {
+            return vocabs.contains(head)
+                       ? vocabs[head]
+                       : std::vector<std::pair<std::string, size_t>>();
         }) |
         flatten();
     for (int i = 1; i < words.size(); i++) {
         auto sub_candidate = codes.get_all(words[i]);
         candidates =
-            candidates | rv::filter([&](const auto& c) {
-                return utf8::distance(c.cbegin(), c.cend()) > i;
+            candidates | rv::filter([&](const auto& p) {
+                return utf8::distance(p.first.cbegin(), p.first.cend()) > i;
             }) |
-            rv::filter([&](const auto& c) {
-                auto s = c.cbegin();
-                utf8::advance(s, i, c.cend());
+            rv::filter([&](const auto& p) {
+                auto s = p.first.cbegin();
+                utf8::advance(s, i, p.first.cend());
                 auto e = s;
-                utf8::next(e, c.cend());
+                utf8::next(e, p.first.cend());
                 return std::find(
                            sub_candidate.cbegin(),
                            sub_candidate.cend(),
@@ -202,5 +185,17 @@ std::vector<std::string> IME::candidates(const std::string& input) {
             }) |
             ranges::to<std::vector>();
     }
-    return candidates;
+
+    std::sort(
+        candidates.begin(), candidates.end(), [](const auto& l, const auto& r) {
+            return l.second > r.second;
+        });
+    std::stable_sort(
+        candidates.begin(), candidates.end(), [](const auto& l, const auto& r) {
+            return utf8::distance(l.first.cbegin(), l.first.cend()) <
+                   utf8::distance(r.first.cbegin(), r.first.cend());
+        });
+
+    return candidates | rv::transform([](const auto& p) { return p.first; }) |
+           ranges::to<std::vector>();
 }
