@@ -8,7 +8,7 @@
 #include <fcitx/inputmethodengine.h>
 #include <fcitx/instance.h>
 
-#include "ime.hpp"
+#include "Cantonese-IME/ime.hpp"
 
 class CantoneseEngine;
 

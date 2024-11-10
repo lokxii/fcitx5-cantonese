@@ -1,0 +1,3 @@
+[submodule "src/Cantonese-IME"]
+	path = src/Cantonese-IME
+	url = https://github.com/lokxii/Cantonese-IME.git

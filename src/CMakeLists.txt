@@ -1,7 +1,10 @@
-# Make sure it produce cantonese.so instead of libcantonese.so
-add_library(cantonese SHARED cantonese.cpp ime.cpp dagdict.cpp)
+add_subdirectory(Cantonese-IME)
+
+add_library(cantonese SHARED cantonese.cpp)
 set_property(TARGET cantonese PROPERTY CXX_STANDARD 23)
-target_link_libraries(cantonese PRIVATE Fcitx5::Core)
+target_link_libraries(cantonese Fcitx5::Core)
+target_link_libraries(cantonese ime)
+
 install(TARGETS cantonese DESTINATION "${FCITX_INSTALL_LIBDIR}/fcitx5")
 
 

@@ -10,6 +10,7 @@ Copy `data/` from Cantonese-IME to `$HOME/.local/share/fcitx5/cantonese/data/`
 ```sh
 mkdir -p build
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release
+make
 sudo make install
 ```
