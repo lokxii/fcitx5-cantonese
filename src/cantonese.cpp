@@ -1,6 +1,20 @@
+#include <fcitx-utils/keysymgen.h>
 #include <fcitx/inputpanel.h>
 
 #include "cantonese.hpp"
+
+static const std::array<fcitx::Key, 10> selectionKeys = {
+    fcitx::Key{FcitxKey_1},
+    fcitx::Key{FcitxKey_2},
+    fcitx::Key{FcitxKey_3},
+    fcitx::Key{FcitxKey_4},
+    fcitx::Key{FcitxKey_5},
+    fcitx::Key{FcitxKey_6},
+    fcitx::Key{FcitxKey_7},
+    fcitx::Key{FcitxKey_8},
+    fcitx::Key{FcitxKey_9},
+    fcitx::Key{FcitxKey_0},
+};
 
 class CantoneseCandidateWord : public fcitx::CandidateWord {
    public:
@@ -113,7 +127,6 @@ class CantoneseCandidateList : public fcitx::CandidateList,
 };
 
 void CantoneseState::keyEvent(fcitx::KeyEvent& event) {
-    // FCITX_INFO() << "Buffer: " << buffer_.userInput();
     if (not buffer_.empty()) {
         if (event.key().check(FcitxKey_BackSpace)) {
             buffer_.backspace();
@@ -124,6 +137,50 @@ void CantoneseState::keyEvent(fcitx::KeyEvent& event) {
             ic_->commitString(buffer_.userInput());
             reset();
             return event.filterAndAccept();
+        }
+    }
+    if (auto candidateList = ic_->inputPanel().candidateList()) {
+        int idx = event.key().keyListIndex(selectionKeys);
+        if (idx >= 0 && idx < candidateList->size()) {
+            event.accept();
+            candidateList->candidate(idx).select(ic_);
+            return;
+        }
+        if (not candidateList->empty()) {
+            if (event.key().check(FcitxKey_ISO_Left_Tab) or
+                event.key().check(FcitxKey_Up)) {
+                candidateList->toCursorMovable()->prevCandidate();
+                ic_->updateUserInterface(
+                    fcitx::UserInterfaceComponent::InputPanel);
+                return event.filterAndAccept();
+            }
+            if (event.key().check(FcitxKey_Tab) or
+                event.key().check(FcitxKey_Down)) {
+                candidateList->toCursorMovable()->nextCandidate();
+                ic_->updateUserInterface(
+                    fcitx::UserInterfaceComponent::InputPanel);
+                return event.filterAndAccept();
+            }
+            if (candidateList->toPageable()->hasNext() and
+                event.key().check(FcitxKey_Right)) {
+                candidateList->toPageable()->next();
+                ic_->updateUserInterface(
+                    fcitx::UserInterfaceComponent::InputPanel);
+                return event.filterAndAccept();
+            }
+            if (candidateList->toPageable()->hasPrev() and
+                event.key().check(FcitxKey_Left)) {
+                candidateList->toPageable()->prev();
+                ic_->updateUserInterface(
+                    fcitx::UserInterfaceComponent::InputPanel);
+                return event.filterAndAccept();
+            }
+            if (event.key().check(FcitxKey_space)) {
+                event.accept();
+                candidateList->candidate(candidateList->cursorIndex())
+                    .select(ic_);
+                return;
+            }
         }
     }
     if (event.key().isSimple()) {
