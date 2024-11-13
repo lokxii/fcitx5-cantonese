@@ -16,6 +16,24 @@ static const std::array<fcitx::Key, 10> selectionKeys = {
     fcitx::Key{FcitxKey_0},
 };
 
+static const std::array<fcitx::Key, 20> punctuation_keys = {
+    fcitx::Key{FcitxKey_comma},       fcitx::Key{FcitxKey_period},
+    fcitx::Key{FcitxKey_slash},       fcitx::Key{FcitxKey_colon},
+    fcitx::Key{FcitxKey_apostrophe},  fcitx::Key{FcitxKey_quotedbl},
+    fcitx::Key{FcitxKey_bracketleft}, fcitx::Key{FcitxKey_bracketright},
+    fcitx::Key{FcitxKey_braceleft},   fcitx::Key{FcitxKey_braceright},
+    fcitx::Key{FcitxKey_less},        fcitx::Key{FcitxKey_greater},
+    fcitx::Key{FcitxKey_backslash},   fcitx::Key{FcitxKey_question},
+    fcitx::Key{FcitxKey_semicolon},   fcitx::Key{FcitxKey_asciitilde},
+    fcitx::Key{FcitxKey_parenright},  fcitx::Key(FcitxKey_parenleft),
+    fcitx::Key{FcitxKey_exclam},      fcitx::Key{FcitxKey_grave},
+};
+
+static const std::array<std::string, 20> punctuations = {
+    "，", "。", "…",  "；", "【", "】", "「", "」", "『", "』",
+    "《", "》", "、", "？", "：", "〜", "（", "）", "！", "°",
+};
+
 class CantoneseCandidateWord : public fcitx::CandidateWord {
    public:
     CantoneseCandidateWord(CantoneseEngine* engine, std::string text)
@@ -127,6 +145,17 @@ class CantoneseCandidateList : public fcitx::CandidateList,
 };
 
 void CantoneseState::keyEvent(fcitx::KeyEvent& event) {
+    size_t idx = event.key().keyListIndex(punctuation_keys);
+    if (idx < punctuation_keys.size()) {
+        event.accept();
+        ic_->commitString(punctuations[idx]);
+        return;
+    }
+    if (buffer_.empty()) {
+        if (event.key().check(FcitxKey_space)) {
+            return;
+        }
+    }
     if (not buffer_.empty()) {
         if (event.key().check(FcitxKey_BackSpace)) {
             buffer_.backspace();
@@ -137,6 +166,11 @@ void CantoneseState::keyEvent(fcitx::KeyEvent& event) {
             ic_->commitString(buffer_.userInput());
             reset();
             return event.filterAndAccept();
+        }
+        if (event.key().check(FcitxKey_space)) {
+            ic_->commitString(buffer_.userInput());
+            reset();
+            return;
         }
     }
     if (auto candidateList = ic_->inputPanel().candidateList()) {
