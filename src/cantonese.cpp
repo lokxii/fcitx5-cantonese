@@ -25,7 +25,7 @@ static const std::array<fcitx::Key, 20> punctuation_keys = {
     fcitx::Key{FcitxKey_less},        fcitx::Key{FcitxKey_greater},
     fcitx::Key{FcitxKey_backslash},   fcitx::Key{FcitxKey_question},
     fcitx::Key{FcitxKey_semicolon},   fcitx::Key{FcitxKey_asciitilde},
-    fcitx::Key{FcitxKey_parenright},  fcitx::Key(FcitxKey_parenleft),
+    fcitx::Key{FcitxKey_parenleft},   fcitx::Key(FcitxKey_parenright),
     fcitx::Key{FcitxKey_exclam},      fcitx::Key{FcitxKey_grave},
 };
 
