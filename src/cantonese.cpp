@@ -30,8 +30,8 @@ static const std::array<fcitx::Key, 20> punctuation_keys = {
 };
 
 static const std::array<std::string, 20> punctuations = {
-    "，", "。", "…",  "；", "【", "】", "「", "」", "『", "』",
-    "《", "》", "、", "？", "：", "〜", "（", "）", "！", "°",
+    "，", "。", "…",  "：", "【", "】", "「", "」", "『", "』",
+    "《", "》", "、", "？", "；", "〜", "（", "）", "！", "°",
 };
 
 class CantoneseCandidateWord : public fcitx::CandidateWord {
